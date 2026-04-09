@@ -25,27 +25,35 @@ vi.mock('../db.js', () => ({
 }));
 
 import { WebChannel } from './web.js';
-import type { OnInboundMessage, OnChatMetadata, RegisteredAgent } from '../types.js';
+import type {
+  OnInboundMessage,
+  OnChatMetadata,
+  RegisteredAgent,
+} from '../types.js';
 
-function makeOpts(overrides: Partial<{
-  onMessage: OnInboundMessage;
-  onChatMetadata: OnChatMetadata;
-  registeredAgents: () => Record<string, RegisteredAgent>;
-  getActiveCount: () => number;
-  getWaitingCount: () => number;
-}> = {}) {
+function makeOpts(
+  overrides: Partial<{
+    onMessage: OnInboundMessage;
+    onChatMetadata: OnChatMetadata;
+    registeredAgents: () => Record<string, RegisteredAgent>;
+    getActiveCount: () => number;
+    getWaitingCount: () => number;
+  }> = {},
+) {
   return {
     onMessage: overrides.onMessage ?? vi.fn(),
     onChatMetadata: overrides.onChatMetadata ?? vi.fn(),
-    registeredAgents: overrides.registeredAgents ?? (() => ({
-      'web:*': {
-        name: 'main',
-        agentName: 'main',
-        trigger: '@Devbox',
-        added_at: new Date().toISOString(),
-        requiresTrigger: false,
-      },
-    })),
+    registeredAgents:
+      overrides.registeredAgents ??
+      (() => ({
+        'web:*': {
+          name: 'main',
+          agentName: 'main',
+          trigger: '@Devbox',
+          added_at: new Date().toISOString(),
+          requiresTrigger: false,
+        },
+      })),
     getActiveCount: overrides.getActiveCount ?? (() => 0),
     getWaitingCount: overrides.getWaitingCount ?? (() => 0),
   };
@@ -79,20 +87,26 @@ describe('WebChannel', () => {
   });
 
   it('rejects requests without X-User-Id', async () => {
-    const res = await fetch(`http://localhost:${port}/api/devbox/conversations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
+    const res = await fetch(
+      `http://localhost:${port}/api/devbox/conversations`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    );
     expect(res.status).toBe(401);
   });
 
   it('POST /conversations creates a conversation', async () => {
-    const res = await fetch(`http://localhost:${port}/api/devbox/conversations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': 'user1' },
-      body: JSON.stringify({}),
-    });
+    const res = await fetch(
+      `http://localhost:${port}/api/devbox/conversations`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': 'user1' },
+        body: JSON.stringify({}),
+      },
+    );
     expect(res.status).toBe(201);
     const body = (await res.json()) as any;
     expect(body.conversationId).toBeDefined();
@@ -106,11 +120,14 @@ describe('WebChannel', () => {
     await channel.connect();
     port = channel.getPort();
 
-    const res = await fetch(`http://localhost:${port}/api/devbox/conversations/conv-1/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': 'user1' },
-      body: JSON.stringify({ content: 'hello agent' }),
-    });
+    const res = await fetch(
+      `http://localhost:${port}/api/devbox/conversations/conv-1/messages`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': 'user1' },
+        body: JSON.stringify({ content: 'hello agent' }),
+      },
+    );
     expect(res.status).toBe(202);
     expect(onMessage).toHaveBeenCalledTimes(1);
 
@@ -131,7 +148,9 @@ describe('WebChannel', () => {
       ws.on('message', (data) => resolve(JSON.parse(data.toString())));
     });
 
-    await channel.sendMessage('web:user1', 'agent reply', { threadId: 'conv-1' });
+    await channel.sendMessage('web:user1', 'agent reply', {
+      threadId: 'conv-1',
+    });
 
     const msg = await messagePromise;
     expect(msg.type).toBe('output');

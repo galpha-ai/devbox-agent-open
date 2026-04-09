@@ -465,7 +465,9 @@ describe('SessionQueue', () => {
 
     it('getActiveCount reflects running sessions', async () => {
       let resolve1!: () => void;
-      const blocker = new Promise<void>((r) => { resolve1 = r; });
+      const blocker = new Promise<void>((r) => {
+        resolve1 = r;
+      });
 
       queue.setProcessMessagesFn(async () => {
         await blocker;

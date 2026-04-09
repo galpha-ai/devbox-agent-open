@@ -1152,7 +1152,8 @@ async function main(): Promise<void> {
     );
   }
 
-  const wantsWeb = WEB_ENABLED || configuredJids.some((jid) => jid.startsWith('web:'));
+  const wantsWeb =
+    WEB_ENABLED || configuredJids.some((jid) => jid.startsWith('web:'));
 
   if (wantsWeb) {
     channels.push(

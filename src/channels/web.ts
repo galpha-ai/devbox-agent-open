@@ -142,7 +142,10 @@ export class WebChannel implements Channel {
     });
   }
 
-  private handleHttp(req: http.IncomingMessage, res: http.ServerResponse): void {
+  private handleHttp(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): void {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
     const path = url.pathname;
 
@@ -160,11 +163,21 @@ export class WebChannel implements Channel {
     const chatJid = `web:${userId}`;
 
     if (path === '/api/devbox/conversations' && req.method === 'POST') {
-      this.readBody(req).then(() => {
-        const conversationId = randomUUID();
-        this.opts.onChatMetadata(chatJid, new Date().toISOString(), undefined, 'web', false);
-        this.jsonResponse(res, 201, { conversationId });
-      }).catch(() => this.jsonResponse(res, 400, { error: 'Invalid request body' }));
+      this.readBody(req)
+        .then(() => {
+          const conversationId = randomUUID();
+          this.opts.onChatMetadata(
+            chatJid,
+            new Date().toISOString(),
+            undefined,
+            'web',
+            false,
+          );
+          this.jsonResponse(res, 201, { conversationId });
+        })
+        .catch(() =>
+          this.jsonResponse(res, 400, { error: 'Invalid request body' }),
+        );
       return;
     }
 
@@ -179,26 +192,35 @@ export class WebChannel implements Channel {
       return;
     }
 
-    const msgMatch = path.match(/^\/api\/devbox\/conversations\/([^/]+)\/messages$/);
+    const msgMatch = path.match(
+      /^\/api\/devbox\/conversations\/([^/]+)\/messages$/,
+    );
     if (msgMatch) {
       const conversationId = msgMatch[1];
 
       if (req.method === 'POST') {
-        this.readBody(req).then((body) => {
-          if (!body.content || typeof body.content !== 'string') {
-            this.jsonResponse(res, 400, { error: 'content is required' });
-            return;
-          }
-          this.deliverMessage(userId, chatJid, conversationId, body.content);
-          this.jsonResponse(res, 202, { queued: true });
-        }).catch(() => this.jsonResponse(res, 400, { error: 'Invalid request body' }));
+        this.readBody(req)
+          .then((body) => {
+            if (!body.content || typeof body.content !== 'string') {
+              this.jsonResponse(res, 400, { error: 'content is required' });
+              return;
+            }
+            this.deliverMessage(userId, chatJid, conversationId, body.content);
+            this.jsonResponse(res, 202, { queued: true });
+          })
+          .catch(() =>
+            this.jsonResponse(res, 400, { error: 'Invalid request body' }),
+          );
         return;
       }
 
       if (req.method === 'GET') {
         const before = url.searchParams.get('before') ?? undefined;
         const limit = parseInt(url.searchParams.get('limit') ?? '50', 10);
-        const messages = getMessageHistory(chatJid, conversationId, { before, limit });
+        const messages = getMessageHistory(chatJid, conversationId, {
+          before,
+          limit,
+        });
         this.jsonResponse(res, 200, { messages });
         return;
       }
@@ -226,7 +248,10 @@ export class WebChannel implements Channel {
 
     if (msg.type === 'message') {
       if (!msg.conversationId || !msg.content) {
-        logger.warn({ userId }, 'Invalid WS message: missing conversationId or content');
+        logger.warn(
+          { userId },
+          'Invalid WS message: missing conversationId or content',
+        );
         return;
       }
       const chatJid = `web:${userId}`;
@@ -261,15 +286,20 @@ export class WebChannel implements Channel {
 
     // Resolve agent for this user JID (wildcard matching like Telegram DMs)
     if (!this.resolveAgentForChat(chatJid)) {
-      logger.warn({ chatJid }, 'No agent registered for web user, dropping message');
+      logger.warn(
+        { chatJid },
+        'No agent registered for web user, dropping message',
+      );
       const ws = this.connections.get(userId);
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          conversationId,
-          code: 'no_agent',
-          message: 'No agent configured for web channel',
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            conversationId,
+            code: 'no_agent',
+            message: 'No agent configured for web channel',
+          }),
+        );
       }
       return;
     }
@@ -307,7 +337,11 @@ export class WebChannel implements Channel {
     return boundAgent;
   }
 
-  private jsonResponse(res: http.ServerResponse, status: number, body: any): void {
+  private jsonResponse(
+    res: http.ServerResponse,
+    status: number,
+    body: any,
+  ): void {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(body));
   }
@@ -315,7 +349,9 @@ export class WebChannel implements Channel {
   private readBody(req: http.IncomingMessage): Promise<any> {
     return new Promise((resolve, reject) => {
       let data = '';
-      req.on('data', (chunk) => { data += chunk; });
+      req.on('data', (chunk) => {
+        data += chunk;
+      });
       req.on('end', () => {
         try {
           resolve(data ? JSON.parse(data) : {});

@@ -517,10 +517,34 @@ describe('web channel db helpers', () => {
 
   it('getMessageHistory returns messages in reverse chronological order with limit', () => {
     storeChatMetadata('web:user1', '2026-01-01T00:00:00Z');
-    const base = { chat_jid: 'web:user1', sender: 'u1', sender_name: 'User', is_from_me: false, is_bot_message: false };
-    storeMessage({ ...base, id: 'm1', thread_id: 'conv-1', content: 'first', timestamp: '2026-01-01T00:00:01Z' });
-    storeMessage({ ...base, id: 'm2', thread_id: 'conv-1', content: 'second', timestamp: '2026-01-01T00:00:02Z' });
-    storeMessage({ ...base, id: 'm3', thread_id: 'conv-1', content: 'third', timestamp: '2026-01-01T00:00:03Z' });
+    const base = {
+      chat_jid: 'web:user1',
+      sender: 'u1',
+      sender_name: 'User',
+      is_from_me: false,
+      is_bot_message: false,
+    };
+    storeMessage({
+      ...base,
+      id: 'm1',
+      thread_id: 'conv-1',
+      content: 'first',
+      timestamp: '2026-01-01T00:00:01Z',
+    });
+    storeMessage({
+      ...base,
+      id: 'm2',
+      thread_id: 'conv-1',
+      content: 'second',
+      timestamp: '2026-01-01T00:00:02Z',
+    });
+    storeMessage({
+      ...base,
+      id: 'm3',
+      thread_id: 'conv-1',
+      content: 'third',
+      timestamp: '2026-01-01T00:00:03Z',
+    });
 
     const result = getMessageHistory('web:user1', 'conv-1', { limit: 2 });
     expect(result).toHaveLength(2);
@@ -530,12 +554,39 @@ describe('web channel db helpers', () => {
 
   it('getMessageHistory supports before cursor', () => {
     storeChatMetadata('web:user1', '2026-01-01T00:00:00Z');
-    const base = { chat_jid: 'web:user1', sender: 'u1', sender_name: 'User', is_from_me: false, is_bot_message: false };
-    storeMessage({ ...base, id: 'm1', thread_id: 'conv-1', content: 'first', timestamp: '2026-01-01T00:00:01Z' });
-    storeMessage({ ...base, id: 'm2', thread_id: 'conv-1', content: 'second', timestamp: '2026-01-01T00:00:02Z' });
-    storeMessage({ ...base, id: 'm3', thread_id: 'conv-1', content: 'third', timestamp: '2026-01-01T00:00:03Z' });
+    const base = {
+      chat_jid: 'web:user1',
+      sender: 'u1',
+      sender_name: 'User',
+      is_from_me: false,
+      is_bot_message: false,
+    };
+    storeMessage({
+      ...base,
+      id: 'm1',
+      thread_id: 'conv-1',
+      content: 'first',
+      timestamp: '2026-01-01T00:00:01Z',
+    });
+    storeMessage({
+      ...base,
+      id: 'm2',
+      thread_id: 'conv-1',
+      content: 'second',
+      timestamp: '2026-01-01T00:00:02Z',
+    });
+    storeMessage({
+      ...base,
+      id: 'm3',
+      thread_id: 'conv-1',
+      content: 'third',
+      timestamp: '2026-01-01T00:00:03Z',
+    });
 
-    const result = getMessageHistory('web:user1', 'conv-1', { before: '2026-01-01T00:00:03Z', limit: 10 });
+    const result = getMessageHistory('web:user1', 'conv-1', {
+      before: '2026-01-01T00:00:03Z',
+      limit: 10,
+    });
     expect(result).toHaveLength(2);
     expect(result[0].id).toBe('m2');
     expect(result[1].id).toBe('m1');
