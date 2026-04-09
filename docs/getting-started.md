@@ -1,51 +1,82 @@
 # Getting Started
 
-This guide walks you through installing, configuring, and running Devbox Agent for the first time.
+This is the step-by-step deployment guide for a human developer or another coding agent.
 
-## Prerequisites
+Follow the sections in order. If you only want one path, start with `Path 1: Fastest First Run`.
 
-- **Node.js >= 20** (check with `node --version`)
-- **Docker** (for Docker runtime) or a **Kubernetes cluster** (for K8s runtime)
-- **A Claude API key** (`ANTHROPIC_API_KEY`) or a **Claude Code OAuth token** (`CLAUDE_CODE_OAUTH_TOKEN`)
-- (Optional) **Telegram bot token** if using the Telegram channel
-- (Optional) **Slack bot token + app token** if using the Slack channel
+## Choose a Deployment Path
 
-## Installation
+1. **Path 1: Fastest First Run**
+   Direct Node.js controller + Docker runner + built-in Web channel. Best first deployment.
+2. **Path 2: Docker Compose**
+   Good for a local team stack or controller-level verification.
+3. **Path 3: Kubernetes with Tilt**
+   Best for full development and production-like behavior.
+
+If you are unsure, choose Path 1 first.
+
+## Step 0: Verify Prerequisites
+
+You need:
+
+- Node.js 20 or newer
+- Docker for Path 1 or Path 2, or a Kubernetes cluster for Path 3
+- One Claude credential:
+  - `ANTHROPIC_API_KEY`, or
+  - `CLAUDE_CODE_OAUTH_TOKEN`
+- Optional chat credentials:
+  - `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`
+  - `TELEGRAM_BOT_TOKEN`
+
+Verify the basics:
+
+```bash
+node --version
+docker info
+```
+
+Expected result:
+
+- `node --version` prints `v20.x` or newer
+- `docker info` succeeds if you are using Path 1 or Path 2
+
+If Docker is unavailable, skip Path 1 and Path 2 and use Path 3.
+
+## Path 1: Fastest First Run
+
+This is the shortest path to a working local deployment.
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/galpha-ai/devbox-agent-open.git
 cd devbox-agent-open
 npm install
-```
-
-Build the TypeScript source:
-
-```bash
 npm run build
 ```
 
-## Configuration
+Expected result:
 
-### 1. Create your config file
+- dependencies install successfully
+- `npm run build` completes without errors
 
-Copy the example configuration and edit it:
+### 2. Point the example agent at a real repo
 
-```bash
-cp config.example.yaml config.yaml
+For the first run, reuse the included `agents/example` agent and edit its repo seed:
+
+```yaml
+# agents/example/seed.yaml
+repos:
+  - name: my-project
+    source: https://github.com/your-org/your-repo.git
+    ref: main
 ```
 
-### 2. Set credentials
+You can create your own agent later. For first deployment, keeping `agents/example` reduces moving parts.
 
-Set your bot tokens and API keys either in `config.yaml` or as environment variables. Environment variables take precedence over config file values.
+### 3. Create a minimal web-only config
 
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-export TELEGRAM_BOT_TOKEN="123456:ABC..."   # if using Telegram
-```
-
-### 3. Minimal config.yaml
-
-A working configuration with one agent and one channel:
+Create `config.yaml` in the repo root:
 
 ```yaml
 assistant_name: Devbox
@@ -57,238 +88,220 @@ container:
   idle_timeout: 300000
   max_concurrent: 2
 
-agents:
-  - name: my-agent
-    path: agents/my-agent
-
-channels:
-  # Telegram DM wildcard -- responds to all direct messages
-  - id: "tg:user:*"
-    agents:
-      - name: my-agent
-        requires_trigger: false
-```
-
-For web-only usage (no Telegram or Slack), use the web channel instead:
-
-```yaml
-assistant_name: Devbox
-
-container:
-  runtime: docker
-  image: devbox-runner:latest
-
 web:
   enabled: true
   port: 8080
 
 agents:
-  - name: my-agent
-    path: agents/my-agent
+  - name: example
+    path: agents/example
 
 channels:
-  - id: "web:*"
+  - id: 'web:*'
     agents:
-      - name: my-agent
+      - name: example
         requires_trigger: false
 ```
 
-## Creating Your First Agent
+Why this path:
 
-Each agent lives in its own directory under `agents/`. An agent directory requires two files: `CLAUDE.md` (instructions) and `seed.yaml` (metadata).
+- no Slack setup
+- no Telegram setup
+- quickest way to prove the controller + runner loop works
 
-### 1. Create the agent directory
+### 4. Export Claude credentials
 
-```bash
-mkdir -p agents/my-agent
-```
-
-### 2. Write CLAUDE.md
-
-This file defines the agent's persona and instructions. Claude reads it at the start of every session.
+Use one of these:
 
 ```bash
-cat > agents/my-agent/CLAUDE.md << 'EOF'
-# My Agent
-
-You are a software development assistant working in an isolated sandbox.
-
-## Guidelines
-
-- Read existing code before making changes
-- Run tests after modifications
-- Create focused, well-scoped commits
-EOF
+export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-### 3. Write seed.yaml
-
-This file defines the sandbox environment: which repos to clone, which model to use, and how the agent should think.
-
-```yaml
-# agents/my-agent/seed.yaml
-
-repos:
-  - name: my-project
-    source: https://github.com/your-org/your-repo.git
-    ref: main
-
-model: sonnet
-
-thinking:
-  type: adaptive
-
-effort: high
-```
-
-**Field reference:**
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `repos` | Yes | List of git repositories to clone into the sandbox workspace. Each entry has `name` (directory name), `source` (remote git URL), and optional `ref` (branch/tag/commit). |
-| `image` | No | Override the default runner container image. |
-| `model` | No | Claude model selection. Short names: `sonnet`, `opus`, `haiku`. Or a full model identifier like `claude-sonnet-4-20250514`. |
-| `thinking` | No | Thinking configuration. `type` can be `adaptive` (model decides), `enabled` (always on), or `disabled`. Optional `budgetTokens` sets a token budget when thinking is enabled. |
-| `effort` | No | Effort level: `low`, `medium`, `high`, or `max`. Controls how much work the agent puts into each response. |
-
-### 4. (Optional) Add agent-specific skills
-
-Place Claude Code skill files in `agents/my-agent/skills/`. These override the shared skills in `container/skills/`.
-
-## Running
-
-### Option 1: Kubernetes with Tilt
-
-This is the recommended approach for development. Tilt watches source files and live-reloads both the controller and runner images.
-
-**Prerequisites:**
-- A local Kubernetes cluster (e.g., OrbStack, minikube, kind)
-- [Tilt](https://tilt.dev/) installed
-- Docker for building images
-
-**Steps:**
+or:
 
 ```bash
-# Set environment variables for secrets
-export TELEGRAM_BOT_TOKEN="..."      # if using Telegram
-export ANTHROPIC_API_KEY="..."
-
-# Create the Kubernetes secrets and start Tilt
-tilt up
+export CLAUDE_CODE_OAUTH_TOKEN="..."
 ```
 
-Tilt will:
-- Build the `devbox-controller` and `devbox-runner` Docker images
-- Apply the Kubernetes manifests from `k8s/local`
-- Create secrets from your environment variables
-- Port-forward 8080 for the web interface (if enabled)
-- Live-sync source changes without full rebuilds
+Expected result:
 
-Press `space` to open the Tilt UI in your browser to monitor resource status.
+- the controller starts without credential errors
 
-### Option 2: Docker Compose
-
-Docker Compose runs the controller as a container that spawns runner containers via the Docker socket.
-
-**Prerequisites:**
-- Docker with Compose v2
-
-**Steps:**
+### 5. Build the runner image
 
 ```bash
-# Build the controller and runner images
-docker build -f docker/controller.Dockerfile -t devbox-controller:latest .
 docker build -f docker/runner.Dockerfile -t devbox-runner:latest .
-
-# Create the data directory (must be identity-mapped between host and container)
-sudo mkdir -p /data/devbox-agent
-sudo chown "$(id -u):$(id -g)" /data/devbox-agent
-
-# Copy and edit the compose config
-cp config.example.yaml config.compose.yaml
-# Edit config.compose.yaml with your settings
-
-# Create .env with your secrets
-cat > .env << 'ENVEOF'
-TELEGRAM_BOT_TOKEN=your-token-here
-ANTHROPIC_API_KEY=sk-ant-...
-ENVEOF
-
-# Start the stack
-docker compose up
 ```
 
-**Key environment variables for Docker Compose:**
+Expected result:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEVBOX_DATA_ROOT` | `/data/devbox-agent` | Host path for persistent data. Must be the same path inside the container. |
-| `DEVBOX_COMPOSE_CFG` | `./config.compose.yaml` | Path to the config file mounted into the controller. |
-| `ANTHROPIC_API_KEY` | -- | Claude API key. |
-| `TELEGRAM_BOT_TOKEN` | -- | Telegram bot token. |
+- Docker builds `devbox-runner:latest` successfully
 
-### Option 3: Direct Node.js
-
-The simplest option for quick testing. Runs the controller directly on your machine.
-
-**Prerequisites:**
-- Docker must be running (the controller spawns runner containers via the Docker socket)
-- The runner image must be built: `docker build -f docker/runner.Dockerfile -t devbox-runner:latest .`
-
-**Steps:**
+### 6. Start the controller
 
 ```bash
-# With config.yaml in the project root
-npm run dev
+npm run dev -- --config config.yaml
 ```
 
-Or with a custom config path:
+Expected result:
+
+- the controller starts
+- the web server listens on port `8080`
+- no config validation errors appear on startup
+
+### 7. Verify the deployment
+
+In a second terminal, check health:
 
 ```bash
-npm run dev -- --config path/to/config.yaml
+curl http://localhost:8080/health
 ```
 
-The controller will start, connect to configured chat platforms, and begin listening for messages.
-
-## Verifying It Works
-
-### Telegram
-
-1. Open a DM with your Telegram bot.
-2. Send a message (e.g., "Hello, what can you do?").
-3. The bot should acknowledge the message and spawn a runner container.
-4. After a few seconds, you should see the agent's response.
-
-In a group chat, prefix your message with the trigger (e.g., `@Devbox what can you do?`).
-
-### Web Channel
-
-If you enabled the web channel (`web.enabled: true`), send a test request:
+Then create a conversation:
 
 ```bash
-# Create a conversation
 curl -X POST http://localhost:8080/api/conversations \
   -H "Content-Type: application/json" \
   -H "X-User-Id: test-user" \
   -d '{"title": "Test"}'
+```
 
-# Send a message (use the conversation ID from the response)
+Take the returned conversation ID and send a message:
+
+```bash
 curl -X POST http://localhost:8080/api/conversations/<id>/messages \
   -H "Content-Type: application/json" \
   -H "X-User-Id: test-user" \
   -d '{"content": "Hello, what can you do?"}'
 ```
 
-### Troubleshooting
+Expected result:
 
-- **Container not starting:** Check that Docker is running and the runner image is built.
-- **No response from agent:** Verify your `ANTHROPIC_API_KEY` is set and valid.
-- **Telegram bot not responding:** Confirm `TELEGRAM_BOT_TOKEN` is correct and the bot is not blocked.
-- **Config errors on startup:** The controller validates config via Zod and prints specific error paths. Check the startup logs.
+- health endpoint returns successfully
+- a session is created
+- the controller starts a runner container
+- the agent responds to the message
 
-## Next Steps
+At this point, the repo is deployed and working locally.
 
-- [Architecture](architecture.md) -- understand the two-process model, session lifecycle, and data layout.
-- [Configuration Reference](configuration.md) -- full documentation of every config field and environment variable.
-- [Local Compose Setup](local-compose-setup.md) -- detailed Docker Compose deployment guide.
-- [Local K8s Setup](local-k8s-setup.md) -- detailed Kubernetes development setup.
+## Path 2: Docker Compose
+
+Use this when you want a local multi-container stack instead of running the controller directly on your machine.
+
+### 1. Prepare the data root
+
+```bash
+sudo mkdir -p /data/devbox-agent
+sudo chown "$(id -u):$(id -g)" /data/devbox-agent
+```
+
+### 2. Create the compose config
+
+```bash
+cp config.compose.yaml.example config.compose.yaml
+```
+
+Edit `config.compose.yaml` for your agent and channels.
+
+For a web-only stack, make sure it includes:
+
+```yaml
+web:
+  enabled: true
+  port: 8080
+
+channels:
+  - id: 'web:*'
+    agents:
+      - name: example
+        requires_trigger: false
+```
+
+### 3. Create `.env`
+
+```bash
+cat > .env << 'EOF'
+ANTHROPIC_API_KEY=sk-ant-...
+EOF
+```
+
+Add Slack or Telegram tokens only if you configure those channels.
+
+### 4. Build and start
+
+```bash
+just build-images
+just compose-up
+```
+
+### 5. Verify
+
+```bash
+just compose-logs controller
+curl http://localhost:8080/health
+```
+
+Expected result:
+
+- controller container starts cleanly
+- runner containers can be spawned
+- web health endpoint responds
+
+For the complete Compose runbook, see [Local Docker Compose Setup](local-compose-setup.md).
+
+## Path 3: Kubernetes with Tilt
+
+Use this when you want the full controller -> runner pod flow, RBAC behavior, and persistent-volume behavior.
+
+### 1. Prepare the environment
+
+You need:
+
+- a local Kubernetes cluster such as OrbStack, minikube, or kind
+- Tilt installed
+- Docker available for image builds
+
+### 2. Export secrets
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Add Slack or Telegram tokens only if your config uses those channels.
+
+### 3. Start Tilt
+
+```bash
+just dev-k8s
+```
+
+### 4. Verify
+
+Expected result:
+
+- Tilt builds controller and runner images
+- Kubernetes resources apply successfully
+- the controller becomes healthy
+- runner pods can be created from incoming requests
+
+For the complete Kubernetes runbook, see [Local Kubernetes Development with Tilt](local-k8s-setup.md).
+
+## Common Problems
+
+- **`docker: command not found`**
+  Install Docker or switch to Path 3.
+- **Controller starts but agent never responds**
+  Check Claude credentials and confirm the runner image exists.
+- **Config validation fails on startup**
+  Re-read `config.yaml` and compare it with [Configuration](configuration.md).
+- **Runner fails to clone repos**
+  Check the repo URLs in `seed.yaml` and any required GitHub credentials.
+- **Slack or Telegram messages do nothing**
+  Confirm the channel is present in config and the required bot tokens are exported.
+
+## Next Docs
+
+- [Architecture](architecture.md) for the controller/runner model
+- [Configuration](configuration.md) for every config field
+- [Local Docker Compose Setup](local-compose-setup.md) for a fuller Compose deployment
+- [Local Kubernetes Development with Tilt](local-k8s-setup.md) for the full K8s workflow

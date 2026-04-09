@@ -125,10 +125,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
   it('timeout after output resolves as success', async () => {
     const manual = createManualHandle();
     const runtime = makeRuntime((config) => {
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       const outDir = path.join(runDir, 'out');
       fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(
@@ -174,10 +171,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
   it('timeout with no output resolves as error', async () => {
     const manual = createManualHandle();
     const runtime = makeRuntime((config) => {
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -209,10 +203,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
 
   it('normal exit after output resolves as success', async () => {
     const runtime = makeRuntime((config) => {
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       const outDir = path.join(runDir, 'out');
       fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(
@@ -263,10 +254,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
     let spawnConfig: ContainerSpawnConfig | undefined;
     const runtime = makeRuntime((config) => {
       spawnConfig = config;
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -326,10 +314,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
 
   it('logs resume diagnostics when done.json reports an error', async () => {
     const runtime = makeRuntime((config) => {
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -377,10 +362,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
 
   it('detects stale session resume when error message has redacted session ID', async () => {
     const runtime = makeRuntime((config) => {
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -458,10 +440,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
     let spawnedImage: string | undefined;
     const runtime = makeRuntime((config) => {
       spawnedImage = config.image;
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -491,9 +470,9 @@ describe('container-runner timeout behavior (file protocol)', () => {
       '/tmp/devbox-app/agents/test-group/seed.yaml',
       [
         'secretMounts:',
-        '  - secretName: quant-dev-kubeconfig',
+        '  - secretName: example-kubeconfig',
         '    mountPath: /home/devbox/.kube',
-        '    hostPath: /tmp/kubeconfigs/quant-dev',
+        '    hostPath: /tmp/kubeconfigs/example',
         '',
       ].join('\n'),
     );
@@ -501,10 +480,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
     let spawnedSecretMounts: ContainerSpawnConfig['secretMounts'];
     const runtime = makeRuntime((config) => {
       spawnedSecretMounts = config.secretMounts;
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),
@@ -527,8 +503,8 @@ describe('container-runner timeout behavior (file protocol)', () => {
     expect(result.status).toBe('success');
     expect(spawnedSecretMounts).toEqual([
       {
-        secretName: 'quant-dev-kubeconfig',
-        hostPath: '/tmp/kubeconfigs/quant-dev',
+        secretName: 'example-kubeconfig',
+        hostPath: '/tmp/kubeconfigs/example',
         containerPath: '/home/devbox/.kube',
       },
     ]);
@@ -549,10 +525,7 @@ describe('container-runner timeout behavior (file protocol)', () => {
     let spawnedImage: string | undefined;
     const runtime = makeRuntime((config) => {
       spawnedImage = config.image;
-      const runDir = containerPathToHostPath(
-        config,
-        config.env.DEVBOX_RUN_DIR,
-      );
+      const runDir = containerPathToHostPath(config, config.env.DEVBOX_RUN_DIR);
       fs.mkdirSync(path.join(runDir, 'out'), { recursive: true });
       fs.writeFileSync(
         path.join(runDir, 'done.json'),

@@ -1,167 +1,64 @@
 # Devbox Agent
 
-Self-hosted, Kubernetes-native sandbox orchestration for AI coding agents.
+Open-source, self-hosted workspace for Claude-style agents.
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Node.js >= 20](https://img.shields.io/badge/Node.js-%3E%3D20-green.svg)](https://nodejs.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+Devbox Agent lets you run Claude-style agents (powered by [Claude Code SDK](https://docs.anthropic.com/en/docs/claude-code/sdk)) in your repos, in your cloud environment, and inside persistent sandboxes you control.
 
-Devbox Agent orchestrates AI coding agents (powered by [Claude Code SDK](https://docs.anthropic.com/en/docs/claude-code/sdk)) in isolated containers on your own infrastructure. Each agent session runs in its own sandbox with persistent workspace, conversation state, and version-controlled instructions.
+Talk to it from Slack, Telegram, or the built-in Web UI. Instead of starting from a blank chat every time, each session keeps its workspace, memory, and instructions across turns.
 
----
+If you want the Claude Managed Agents model, but open-source and self-hosted, start here.
 
-## Why Devbox Agent
-
-- **Self-hosted**: Your infrastructure, your data, your control. No code or conversation data leaves your network.
-- **Kubernetes-native**: Agents run as Pods, workspaces are Persistent Volume Claims, and RBAC controls access. Runs equally well on Docker for local development.
-- **Chat-first developer experience**: Trigger agents from Slack, Telegram, or the built-in Web UI. Agents respond in-thread with full conversation context.
-- **Agent-as-Code**: Agent definitions are version-controlled directories containing a `CLAUDE.md` (instructions) and `seed.yaml` (repos, model, configuration). Review agent changes in pull requests like any other code.
+For step-by-step deployment instructions, go straight to [Getting Started](docs/getting-started.md).
 
 ---
 
-## How It Works
+## Why Teams Use It
 
-Devbox Agent uses a two-process model where the controller and runner never share memory:
+- **Self-hosted**: repos, storage, logs, and secrets stay under your control
+- **Persistent sessions**: workspaces and Claude state survive across turns
+- **Agent-as-code**: `CLAUDE.md` and `seed.yaml` live in Git
+- **Chat-first**: work from Slack, Telegram, or the built-in Web UI
+- **Multi-repo workspaces**: start a sandbox with several repos already checked out
+- **Inspectable architecture**: controller/runner split is easy to reason about and operate
 
-**Controller** (long-lived process): Receives chat messages from connected platforms, routes them to the correct session, spawns and manages runner containers, persists state in SQLite, and enforces concurrency limits.
+## Two Core Use Cases
 
-**Runner** (one container per session): Executes the Claude Code SDK via `query()`, reads and writes the workspace, and communicates results back through filesystem-based IPC. The runner stays alive across conversation turns and exits only on idle timeout or explicit shutdown.
+### 1. Shared company workspace for humans and agents
 
-```
-                         +------------------+
-                         |  Chat Platforms   |
-                         |  (Slack/Telegram/ |
-                         |   Web UI/API)     |
-                         +--------+---------+
-                                  |
-                                  v
-                         +--------+---------+
-                         |    Controller     |
-                         |  (Node.js, SQLite)|
-                         |  Routes messages  |
-                         |  Manages sessions |
-                         +----+----+----+---+
-                              |    |    |
-                    +---------+    |    +---------+
-                    v              v              v
-              +-----+----+  +-----+----+  +------+---+
-              |  Runner   |  |  Runner   |  |  Runner  |
-              | Container |  | Container |  | Container|
-              | (Agent A) |  | (Agent B) |  | (Agent A)|
-              | Session 1 |  | Session 2 |  | Session 3|
-              +----------+  +----------+  +----------+
-                   |              |              |
-                   v              v              v
-              /workspace     /workspace     /workspace
-              (PVC/bind)     (PVC/bind)     (PVC/bind)
-```
+Run Devbox Agent against a shared monorepo and a shared cloud environment so multiple employees can work with the same agent context.
 
----
+- New team members can get the same repos, permissions, tools, and setup as existing employees.
+- Different Slack channels or threads can track different tasks without losing shared company context.
+- The agent can carry working memory across people, not just across turns.
 
-## Comparison with Claude Managed Agents
+### 2. Natural-language research, simulation, and financial backtesting
 
-Devbox Agent is the self-hosted complement to [Anthropic's Claude Managed Agents](https://docs.anthropic.com/en/docs/agents). Both provide sandboxed agent execution, but they target different deployment models.
+Let a human describe a strategy, thesis, or simulation idea in plain language and let the agent turn it into runnable work inside a hosted research environment.
 
-| Feature | Devbox Agent | Claude Managed Agents |
-|---|---|---|
-| **Deployment** | Self-hosted on your infrastructure | Cloud-hosted by Anthropic |
-| **Sandbox** | Kubernetes Pods or Docker containers | Anthropic-managed sandboxes |
-| **Orchestration** | Your K8s cluster, your scaling rules | Fully managed by Anthropic |
-| **Triggers** | Slack, Telegram, Web UI, API | API |
-| **Session persistence** | SQLite + PVCs, survives restarts | Managed by Anthropic |
-| **Multi-agent** | Multiple agent definitions per deployment | Single agent per session |
-| **Observability** | Container logs, structured IPC, your monitoring stack | Anthropic dashboard |
-| **Agent definition** | `CLAUDE.md` + `seed.yaml` in your repo | API parameters |
-| **Data residency** | Your network, your storage, your rules | Anthropic's infrastructure |
+- The agent can work inside your Google Cloud environment with your research code, data access, and backtesting stack.
+- Ideas can move from prompt -> code -> backtest -> revision in the same persistent workspace.
+- Session history and experiment context do not disappear between chats.
 
-Devbox Agent and Claude Managed Agents are complementary -- use Managed Agents for zero-ops cloud execution, use Devbox Agent when you need self-hosted infrastructure, Kubernetes integration, or data sovereignty.
+Devbox Agent is the orchestration layer here. It does not ship a built-in trading engine, but it gives your AI a stable place where your own research and backtesting tools can live.
+
+## The 30-Second Mental Model
+
+- **Controller**: listens to chat/web input, stores state, manages queues, and starts sandboxes
+- **Runner**: the sandbox container for one session; this is where Claude Code actually runs
+- **IPC**: controller and runner communicate through files on disk, not shared memory
+- **Invariant**: the controller orchestrates; the runner executes
 
 ---
 
-## Quick Start
+## Start Here
 
-### Option 1: Kubernetes with Tilt (recommended)
+`README.md` is the overview. For the step-by-step deployment guide for a human developer or another coding agent, start with [Getting Started](docs/getting-started.md).
 
-Full feature set including Pod isolation, RBAC, and persistent volumes.
-
-```bash
-# Prerequisites: OrbStack or Minikube, Tilt
-brew install orbstack tilt
-
-# Start the development environment
-just dev-k8s
-```
-
-Tilt UI opens at `http://localhost:10350` with hot-reload, logs, and resource monitoring.
-
-See [docs/local-k8s-setup.md](docs/local-k8s-setup.md) for detailed setup.
-
-### Option 2: Docker Compose (lightweight)
-
-Quick setup for controller logic testing on low-resource machines.
-
-```bash
-just build-images
-just compose-up
-```
-
-Note: Cannot test Kubernetes-specific features (Pod API, RBAC, PVC).
-
-See [docs/local-compose-setup.md](docs/local-compose-setup.md) for detailed setup.
-
-### Option 3: Direct Node.js (fastest)
-
-Controller-only development without containers.
-
-```bash
-just dev-node
-```
-
----
-
-## Agent Definition
-
-Each agent is a directory under `agents/` containing two files:
-
-```
-agents/example/
-  CLAUDE.md       # Agent instructions and persona
-  seed.yaml       # Sandbox configuration (repos, model, settings)
-```
-
-**CLAUDE.md** defines the agent's behavior, capabilities, and guidelines. This is the system prompt that Claude Code receives inside the sandbox.
-
-**seed.yaml** declares the sandbox environment:
-
-```yaml
-# Repositories to clone into the sandbox workspace
-repos:
-  - name: my-project
-    source: https://github.com/your-org/your-repo.git
-    ref: main
-
-# Optional overrides
-# image: custom-runner:latest       # Runner image
-# model: sonnet                     # Claude model (sonnet, opus, haiku, or full name)
-# thinking:                         # Thinking configuration
-#   type: adaptive
-# effort: high                      # Effort level (low, medium, high, max)
-```
-
-Agents can also include a `skills/` directory for agent-specific Claude Code skills that supplement or override the shared skill set.
-
----
-
-## Architecture Overview
-
-The codebase is organized into four layers:
-
-- **Controller** (`src/`): Message routing, session management, container orchestration, chat platform adapters, SQLite persistence.
-- **Runner** (`container/`): In-container agent execution, Claude Code SDK integration, IPC communication, workspace seeding.
-- **Agent Definitions** (`agents/`): Version-controlled agent templates with instructions and seed configuration.
-- **Kubernetes Manifests** (`k8s/`): Kustomize overlays for staging and production deployment.
-
-For the full code map, type hierarchy, data layout, and architectural invariants, see [docs/architecture.md](docs/architecture.md).
+- Fastest first run: [Getting Started](docs/getting-started.md)
+- Team/local stack: [Local Docker Compose Setup](docs/local-compose-setup.md)
+- Full development: [Local Kubernetes Development with Tilt](docs/local-k8s-setup.md)
+- Architecture: [Architecture](docs/architecture.md)
+- Full config: [Configuration](docs/configuration.md)
 
 ---
 
@@ -179,22 +76,8 @@ See [docs/roadmap.md](docs/roadmap.md) for details.
 
 ---
 
-## Documentation
+## Project Info
 
-- [Architecture](docs/architecture.md) -- System design, code map, and architectural invariants
-- [Getting Started](docs/getting-started.md) -- First-run setup and configuration
-- [Configuration](docs/configuration.md) -- Full configuration reference
-- [Roadmap](docs/roadmap.md) -- Project phases and planned features
-- [Contributing](CONTRIBUTING.md) -- Contribution guidelines
-
----
-
-## Contributing
-
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting issues, proposing changes, and setting up a development environment.
-
----
-
-## License
-
-AGPL-3.0. See [LICENSE](LICENSE) for the full text.
+- Runtime: Node.js 20 or newer
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- License: [LICENSE](LICENSE)

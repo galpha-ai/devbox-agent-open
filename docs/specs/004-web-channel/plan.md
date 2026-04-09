@@ -1039,7 +1039,7 @@ web:
 
 agents:
   - name: main
-    path: agents/quant-dev
+    path: agents/main
   - name: example
     path: agents/example
 

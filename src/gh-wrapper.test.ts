@@ -75,10 +75,9 @@ function initRepo(remoteUrl: string): string {
 describe('gh wrapper', () => {
   it('selects the owner token from --repo', () => {
     const result = runWrapper(
-      ['pr', 'create', '--repo', 'your-org/ingester'],
+      ['pr', 'create', '--repo', 'your-org/private-research-repo'],
       {
-        tokensFileContent:
-          '{"your-org":"token-a","your-org":"token-b"}',
+        tokensFileContent: '{"your-org":"token-a","your-org":"token-b"}',
         env: { GH_TOKEN: 'fallback-token' },
       },
     );
@@ -98,7 +97,7 @@ describe('gh wrapper', () => {
     });
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('GH_TOKEN=token-a');
+    expect(result.stdout).toContain('GH_TOKEN=token-b');
     fs.rmSync(repoDir, { recursive: true, force: true });
   });
 

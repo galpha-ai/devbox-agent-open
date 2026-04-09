@@ -12,7 +12,7 @@ Create a Secret in the same namespace where runner pods start. Store the kubecon
 
 ```bash
 KUBECONFIG=/home/youruser/.kube/your-cluster.yaml \
-kubectl -n devbox-agent-staging create secret generic quant-dev-kubeconfig \
+kubectl -n devbox-agent-staging create secret generic example-kubeconfig \
   --from-file=config=/home/youruser/.kube/your-cluster.yaml
 ```
 
@@ -24,9 +24,9 @@ Add a `secretMounts` entry to the agent definition. `secretName` is the Kubernet
 
 ```yaml
 secretMounts:
-  - secretName: quant-dev-kubeconfig
+  - secretName: example-kubeconfig
     mountPath: /home/devbox/.kube
-    hostPath: /home/youruser/.kube/quant-dev
+    hostPath: /home/youruser/.kube/example
 ```
 
 Kubernetes mounts the Secret as a read-only volume at `/home/devbox/.kube`. Docker bind-mounts the local directory at the same path, also read-only.
@@ -36,8 +36,8 @@ Kubernetes mounts the Secret as a read-only volume at `/home/devbox/.kube`. Dock
 Docker expects `hostPath` to be a directory whose contents should appear at `mountPath`. For kubeconfigs, create a directory that contains a single `config` file:
 
 ```bash
-mkdir -p /home/youruser/.kube/quant-dev
-cp /home/youruser/.kube/your-cluster.yaml /home/youruser/.kube/quant-dev/config
+mkdir -p /home/youruser/.kube/example
+cp /home/youruser/.kube/your-cluster.yaml /home/youruser/.kube/example/config
 ```
 
 If you use a different kubeconfig file locally, replace `/home/youruser/.kube/your-cluster.yaml` with the value from `tools.md`.

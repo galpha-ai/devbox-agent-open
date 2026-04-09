@@ -144,9 +144,7 @@ describe('DockerRuntime.ensureRunning', () => {
 
 describe('DockerRuntime.cleanupOrphans', () => {
   it('stops orphaned devbox containers', async () => {
-    mockExecSync.mockReturnValueOnce(
-      'devbox-group1-111\ndevbox-group2-222\n',
-    );
+    mockExecSync.mockReturnValueOnce('devbox-group1-111\ndevbox-group2-222\n');
     mockExecSync.mockReturnValue('');
     const runtime = new DockerRuntime('docker');
 
@@ -217,8 +215,8 @@ describe('DockerRuntime.spawn', () => {
       ],
       secretMounts: [
         {
-          secretName: 'quant-dev-kubeconfig',
-          hostPath: '/host/kubeconfigs/quant-dev',
+          secretName: 'example-kubeconfig',
+          hostPath: '/host/kubeconfigs/example',
           containerPath: '/home/devbox/.kube',
         },
       ],
@@ -251,7 +249,7 @@ describe('DockerRuntime.spawn', () => {
         '-v',
         '/host/a:/container/a',
         '-v',
-        '/host/kubeconfigs/quant-dev:/home/devbox/.kube:ro',
+        '/host/kubeconfigs/example:/home/devbox/.kube:ro',
         'devbox-runner:latest',
       ],
       { stdio: ['ignore', 'pipe', 'pipe'] },
@@ -373,7 +371,7 @@ describe('K8sRuntime', () => {
       ],
       secretMounts: [
         {
-          secretName: 'quant-dev-kubeconfig',
+          secretName: 'example-kubeconfig',
           hostPath: '/ignored/in-k8s',
           containerPath: '/home/devbox/.kube',
         },
@@ -429,7 +427,7 @@ describe('K8sRuntime', () => {
             expect.objectContaining({
               name: 'secret-mount-0',
               secret: {
-                secretName: 'quant-dev-kubeconfig',
+                secretName: 'example-kubeconfig',
               },
             }),
           ]),

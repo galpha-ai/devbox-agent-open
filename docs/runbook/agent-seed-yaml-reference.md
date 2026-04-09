@@ -177,9 +177,9 @@ Mount Kubernetes Secrets or local directories as read-only volumes in the runner
 **Example:**
 ```yaml
 secretMounts:
-  - secretName: quant-dev-kubeconfig
+  - secretName: example-kubeconfig
     mountPath: /home/devbox/.kube
-    hostPath: /home/youruser/.kube/quant-dev
+    hostPath: /home/youruser/.kube/example
 ```
 
 ## Configuration Precedence
